@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ProfileController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -20,5 +21,10 @@ Route::prefix('v1')->group(function () {
         });
         
         Route::post('/logout', [AuthController::class, 'logout']);
+
+        // Profile Routes (Issue #2)
+        Route::get('/profile', [ProfileController::class, 'show']);
+        Route::put('/profile', [ProfileController::class, 'update']);
+        Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
     });
 });
