@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\KosController;
+use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\CompareController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -13,6 +15,9 @@ Route::prefix('v1')->group(function () {
     
     // Pencari Side / Public Kos Routes (Tanpa Auth)
     Route::get('/kos', [KosController::class, 'search']);
+    
+    // Route Compare ditaruh di atas route dinamis /kos/{id} untuk menghindari tabrakan route parameter
+    Route::get('/kos/compare', [CompareController::class, 'compare']);
     Route::get('/kos/{id}', [KosController::class, 'showPublicDetails']);
 
     // Protected Routes (Harus menggunakan Sanctum token)
@@ -31,6 +36,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show']);
         Route::put('/profile', [ProfileController::class, 'update']);
         Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
+
+        // Favorite Routes (Issue #5)
+        Route::get('/favorites', [FavoriteController::class, 'index']);
+        Route::post('/favorites', [FavoriteController::class, 'store']);
+        Route::delete('/favorites/{kos_id}', [FavoriteController::class, 'destroy']);
 
         // Owner Kos Routes (Issue #3) - Hanya bisa diakses oleh role 'pemilik'
         Route::middleware('role:pemilik')->group(function () {
