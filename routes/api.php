@@ -10,6 +10,10 @@ Route::prefix('v1')->group(function () {
     // Public Routes
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    
+    // Pencari Side / Public Kos Routes (Tanpa Auth)
+    Route::get('/kos', [KosController::class, 'search']);
+    Route::get('/kos/{id}', [KosController::class, 'showPublicDetails']);
 
     // Protected Routes (Harus menggunakan Sanctum token)
     Route::middleware('auth:sanctum')->group(function () {

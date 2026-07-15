@@ -70,10 +70,26 @@ class Kos extends Model
     }
 
     /**
-     * Relasi ke Galeri Foto Kos.
+     * Relasi ke Galeri Foto Kos (nama method lama).
      */
     public function fotos(): HasMany
     {
         return $this->hasMany(KosFoto::class, 'kos_id');
+    }
+
+    /**
+     * Relasi ke Galeri Foto Kos (nama method baru sesuai request asdos).
+     */
+    public function kosFoto(): HasMany
+    {
+        return $this->hasMany(KosFoto::class, 'kos_id');
+    }
+
+    /**
+     * Relasi ke Ulasan (Reviews).
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'kos_id');
     }
 }
