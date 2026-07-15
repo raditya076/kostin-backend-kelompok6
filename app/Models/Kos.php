@@ -1,0 +1,79 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+#[Fillable([
+    'pemilik_id',
+    'nama_kos',
+    'deskripsi',
+    'tipe',
+    'alamat',
+    'kecamatan',
+    'kota',
+    'provinsi',
+    'kode_pos',
+    'lat',
+    'lng',
+    'harga_per_bulan',
+    'jumlah_kamar',
+    'kamar_terisi',
+    'ada_nomor_kamar',
+    'wifi',
+    'ac',
+    'kamar_mandi_dalam',
+    'parkir',
+    'dapur',
+    'laundry',
+    'security',
+    'cctv',
+    'foto_utama',
+    'status'
+])]
+class Kos extends Model
+{
+    protected $table = 'kos';
+
+    /**
+     * Konfigurasi tipe data casting atribut.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'ada_nomor_kamar'   => 'boolean',
+            'wifi'              => 'boolean',
+            'ac'                => 'boolean',
+            'kamar_mandi_dalam' => 'boolean',
+            'parkir'            => 'boolean',
+            'dapur'             => 'boolean',
+            'laundry'           => 'boolean',
+            'security'          => 'boolean',
+            'cctv'              => 'boolean',
+            'harga_per_bulan'   => 'decimal:2',
+            'lat'               => 'decimal:8',
+            'lng'               => 'decimal:8',
+        ];
+    }
+
+    /**
+     * Relasi ke User (Pemilik).
+     */
+    public function pemilik(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pemilik_id');
+    }
+
+    /**
+     * Relasi ke Galeri Foto Kos.
+     */
+    public function fotos(): HasMany
+    {
+        return $this->hasMany(KosFoto::class, 'kos_id');
+    }
+}
