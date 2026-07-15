@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\KosController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -26,5 +27,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show']);
         Route::put('/profile', [ProfileController::class, 'update']);
         Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
+
+        // Owner Kos Routes (Issue #3) - Hanya bisa diakses oleh role 'pemilik'
+        Route::middleware('role:pemilik')->group(function () {
+            Route::get('/owner/kos', [KosController::class, 'index']);
+            Route::post('/owner/kos', [KosController::class, 'store']);
+            Route::put('/owner/kos/{id}', [KosController::class, 'update']);
+            Route::delete('/owner/kos/{id}', [KosController::class, 'destroy']);
+        });
     });
 });
