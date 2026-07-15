@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseController;
 use App\Http\Requests\StoreKosRequest;
 use App\Http\Requests\UpdateKosRequest;
+use App\Http\Requests\SearchKosRequest;
 use App\Services\KosService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -92,6 +93,35 @@ class KosController extends BaseController
             return $this->error($e->getMessage(), 403);
         } catch (ModelNotFoundException $e) {
             return $this->error('Properti kos tidak ditemukan', 404);
+        }
+    }
+
+    /**
+     * Mencari kos berdasarkan filter dinamis (Public / Pencari Side).
+     *
+     * GET /api/v1/kos
+     */
+    public function search(SearchKosRequest $request): JsonResponse
+    {
+        $filters = $request->validated();
+        $kos = $this->kosService->search($filters);
+        return $this->success($kos, 'Daftar pencarian kos berhasil diambil');
+    }
+
+    /**
+     * Menampilkan detail satu kos aktif beserta ulasan & galeri (Public / Pencari Side).
+     *
+     * GET /api/v1/kos/{id}
+     */
+    public function showPublicDetails($id): JsonResponse
+    {
+        try {
+            $kos = $this->kosService->findActiveDetails((int)$id);
+            return $this->success($kos, 'Detail kos berhasil diambil');
+        } catch (ModelNotFoundException $e) {
+            return $this->error($e->getMessage(), 404);
+        } catch (\Exception $e) {
+            return $this->error('Terjadi kesalahan server: ' . $e->getMessage(), 500);
         }
     }
 }

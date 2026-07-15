@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class KosService
 {
@@ -139,5 +140,84 @@ class KosService
             'kos_id'     => $id,
             'pemilik_id' => $ownerId,
         ]);
+    }
+
+    /**
+     * Mencari kos berstatus aktif dengan filter pencarian dinamis (Pencari Side).
+     *
+     * @param array $filters
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function search(array $filters)
+    {
+        $query = Kos::with('kosFoto')->where('status', 'aktif');
+
+        // Filter Kota
+        if (!empty($filters['kota'])) {
+            $query->where('kota', 'like', '%' . $filters['kota'] . '%');
+        }
+
+        // Filter Rentang Harga
+        if (isset($filters['harga_min'])) {
+            $query->where('harga_per_bulan', '>=', $filters['harga_min']);
+        }
+        if (isset($filters['harga_max'])) {
+            $query->where('harga_per_bulan', '<=', $filters['harga_max']);
+        }
+
+        // Filter Tipe Kos
+        if (!empty($filters['tipe'])) {
+            $query->where('tipe', $filters['tipe']);
+        }
+
+        // Filter Fasilitas (wifi, ac, kamar_mandi_dalam, parkir, dapur, laundry, security, cctv)
+        $facilities = [
+            'wifi', 'ac', 'kamar_mandi_dalam', 'parkir', 
+            'dapur', 'laundry', 'security', 'cctv'
+        ];
+
+        foreach ($facilities as $facility) {
+            if (isset($filters[$facility]) && $filters[$facility] === true) {
+                $query->where($facility, true);
+            }
+        }
+
+        $results = $query->get();
+
+        Log::info('Pencarian kos aktif dilakukan', [
+            'filters'         => $filters,
+            'total_ditemukan' => $results->count()
+        ]);
+
+        return $results;
+    }
+
+    /**
+     * Mengambil satu kos aktif beserta relasi foto dan reviews (Pencari Side).
+     *
+     * @param int $id
+     * @return Kos
+     * @throws ModelNotFoundException
+     */
+    public function findActiveDetails(int $id): Kos
+    {
+        // Memuat kos dengan relasi kosFoto (galeri) dan reviews (serta data user reviewer untuk detail lengkap)
+        $kos = Kos::with(['kosFoto', 'reviews.user'])
+            ->where('status', 'aktif')
+            ->find($id);
+
+        if (!$kos) {
+            Log::warning('Percobaan pengambilan detail kos gagal: tidak ditemukan atau tidak aktif', [
+                'kos_id' => $id
+            ]);
+            throw new ModelNotFoundException("Properti kos tidak ditemukan atau tidak aktif.");
+        }
+
+        Log::info('Detail kos aktif berhasil diambil', [
+            'kos_id'   => $kos->id,
+            'nama_kos' => $kos->nama_kos
+        ]);
+
+        return $kos;
     }
 }
