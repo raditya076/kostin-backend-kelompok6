@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\KosController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\CompareController;
 use App\Http\Controllers\Api\BookingController;
+use App\Http\Controllers\Api\PaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -13,6 +14,7 @@ Route::prefix('v1')->group(function () {
     // Public Routes
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/midtrans/webhook', [PaymentController::class, 'handleWebhook']);
     
     // Pencari Side / Public Kos Routes (Tanpa Auth)
     Route::get('/kos', [KosController::class, 'search']);
