@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Booking;
 use App\Models\Kos;
 use App\Models\User;
+use App\Models\PembagianDana;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -193,5 +194,158 @@ class BookingService
         ]);
 
         return $booking;
+    }
+
+    /**
+     * Memproses notifikasi webhook dari Midtrans.
+     *
+     * @param array $notif
+     * @return array
+     * @throws \Exception
+     */
+    public function processWebhook(array $notif): array
+    {
+        $orderId = $notif['order_id'] ?? '';
+        $statusCode = $notif['status_code'] ?? '';
+        $grossAmount = $notif['gross_amount'] ?? '';
+        $signatureKey = $notif['signature_key'] ?? '';
+        $transactionStatus = $notif['transaction_status'] ?? '';
+        $paymentType = $notif['payment_type'] ?? '';
+        $fraudStatus = $notif['fraud_status'] ?? '';
+
+        // 1. Verifikasi Signature SHA512
+        $serverKey = config('midtrans.server_key');
+        $computedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+
+        if ($computedSignature !== $signatureKey) {
+            Log::error('Verifikasi Signature Webhook Midtrans GAGAL', [
+                'order_id' => $orderId,
+                'received' => $signatureKey,
+                'computed' => $computedSignature
+            ]);
+            throw new \Exception("Invalid Midtrans Signature Key", 403);
+        }
+
+        // 2. Cari Booking berdasarkan midtrans_order_id
+        $booking = Booking::where('midtrans_order_id', $orderId)->first();
+        if (!$booking) {
+            Log::info("Webhook Midtrans diabaikan (ignore): Booking tidak ditemukan untuk order_id: {$orderId}");
+            return [
+                'status' => 'ignored',
+                'message' => "Booking not found for order_id: {$orderId}"
+            ];
+        }
+
+        // 3. Logika status update jika settlement atau capture (fraud accept)
+        $isSettlement = ($transactionStatus === 'settlement');
+        $isCaptureAccept = ($transactionStatus === 'capture' && $fraudStatus === 'accept');
+
+        if ($isSettlement || $isCaptureAccept) {
+            // Pastikan booking belum aktif atau selesai agar tidak double processing
+            if ($booking->status !== 'aktif' && $booking->status !== 'selesai') {
+                
+                // MAPPING: Terjemahkan payment_type Midtrans ke nilai ENUM metode_pembayaran DB Anda
+                $metodePembayaran = 'transfer_bank'; // default
+                if ($paymentType === 'bank_transfer' || $paymentType === 'echannel') {
+                    $metodePembayaran = 'transfer_bank';
+                } elseif (in_array($paymentType, ['gopay', 'shopeepay'])) {
+                    $metodePembayaran = 'ewallet';
+                } elseif ($paymentType === 'qris') {
+                    $metodePembayaran = 'qris';
+                }
+
+                DB::transaction(function () use ($booking, $paymentType, $metodePembayaran, $transactionStatus) {
+                    // Update Status Booking ke aktif
+                    $booking->update([
+                        'status'            => 'aktif',
+                        'payment_type'      => $paymentType,
+                        'metode_pembayaran' => $metodePembayaran,
+                        'tanggal_bayar'     => now(),
+                        'midtrans_status'   => $transactionStatus,
+                    ]);
+
+                    // Increment kamar_terisi pada kos terkait (+1)
+                    $kos = $booking->kos;
+                    if ($kos) {
+                        $kos->increment('kamar_terisi');
+                        Log::info("Kamar terisi untuk Kos ID {$kos->id} bertambah menjadi {$kos->kamar_terisi}");
+                    }
+
+                    // Catat bagi hasil pemilik kos
+                    $this->recordDanaDisbursement($booking->id);
+                });
+
+                Log::info("Webhook Midtrans SUKSES: Booking ID {$booking->id} diperbarui menjadi aktif.", [
+                    'order_id' => $orderId,
+                    'transaction_status' => $transactionStatus
+                ]);
+
+                return [
+                    'status' => 'success',
+                    'message' => 'Booking updated to active successfully'
+                ];
+            } else {
+                Log::info("Webhook Midtrans diabaikan (ignore): Booking ID {$booking->id} sudah memiliki status '{$booking->status}'", [
+                    'order_id' => $orderId
+                ]);
+                return [
+                    'status' => 'ignored',
+                    'message' => "Booking is already {$booking->status}"
+                ];
+            }
+        }
+
+        // Jika status transaksi lain (misalnya: pending, deny, cancel, expire)
+        $booking->update([
+            'midtrans_status' => $transactionStatus
+        ]);
+
+        Log::info("Webhook Midtrans diproses: Status Midtrans Booking ID {$booking->id} diperbarui menjadi {$transactionStatus}", [
+            'order_id' => $orderId
+        ]);
+
+        return [
+            'status' => 'processed',
+            'message' => "Transaction status {$transactionStatus} processed"
+        ];
+    }
+
+    /**
+     * Mencatat pembagian dana bagi hasil pemilik kos.
+     *
+     * @param int $bookingId
+     * @return PembagianDana
+     */
+    public function recordDanaDisbursement(int $bookingId): PembagianDana
+    {
+        $booking = Booking::with('kos')->findOrFail($bookingId);
+        
+        $totalTransaksi = (float) $booking->total_harga;
+        $persenPlatform = 3.00;
+        $biayaPlatform = $totalTransaksi * 0.03;
+        $biayaGateway = 0.00;
+        $jatahPemilik = $totalTransaksi - $biayaPlatform;
+
+        $pembagian = PembagianDana::create([
+            'booking_id'          => $booking->id,
+            'pemilik_id'          => $booking->kos->pemilik_id,
+            'total_transaksi'     => $totalTransaksi,
+            'persen_platform'     => $persenPlatform,
+            'biaya_platform'      => $biayaPlatform,
+            'biaya_gateway'       => $biayaGateway,
+            'jatah_pemilik'       => $jatahPemilik,
+            'status_disbursement' => 'pending',
+            'catatan'             => 'Pencatatan otomatis pembagian dana via webhook Midtrans.',
+        ]);
+
+        Log::info('Bagi hasil (disbursement) berhasil dicatat', [
+            'booking_id'      => $booking->id,
+            'pemilik_id'      => $booking->kos->pemilik_id,
+            'total_transaksi' => $totalTransaksi,
+            'biaya_platform'  => $biayaPlatform,
+            'jatah_pemilik'   => $jatahPemilik,
+        ]);
+
+        return $pembagian;
     }
 }
