@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\KosController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\CompareController;
+use App\Http\Controllers\Api\BookingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +42,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/favorites', [FavoriteController::class, 'index']);
         Route::post('/favorites', [FavoriteController::class, 'store']);
         Route::delete('/favorites/{kos_id}', [FavoriteController::class, 'destroy']);
+
+        // Booking Routes (Issue #6)
+        Route::get('/bookings', [BookingController::class, 'index']);
+        Route::post('/bookings', [BookingController::class, 'store']);
+        Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
+
+        // Booking Complete khusus untuk Pemilik Kos
+        Route::middleware('role:pemilik')->group(function () {
+            Route::post('/bookings/{id}/complete', [BookingController::class, 'complete']);
+        });
 
         // Owner Kos Routes (Issue #3) - Hanya bisa diakses oleh role 'pemilik'
         Route::middleware('role:pemilik')->group(function () {
