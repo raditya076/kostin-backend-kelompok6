@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\CompareController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ReviewController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,7 @@ Route::prefix('v1')->group(function () {
     // Route Compare ditaruh di atas route dinamis /kos/{id} untuk menghindari tabrakan route parameter
     Route::get('/kos/compare', [CompareController::class, 'compare']);
     Route::get('/kos/{id}', [KosController::class, 'showPublicDetails']);
+    Route::get('/kos/{id}/reviews', [ReviewController::class, 'index']);
 
     // Protected Routes (Harus menggunakan Sanctum token)
     Route::middleware('auth:sanctum')->group(function () {
@@ -49,6 +51,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/bookings', [BookingController::class, 'index']);
         Route::post('/bookings', [BookingController::class, 'store']);
         Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
+
+        // Review Routes (Issue #8)
+        Route::post('/kos/{id}/reviews', [ReviewController::class, 'store']);
 
         // Booking Complete khusus untuk Pemilik Kos
         Route::middleware('role:pemilik')->group(function () {
