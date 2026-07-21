@@ -9,10 +9,12 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\AdminController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->group(function () {
+// Proteksi Rate Limiting (Maksimal 60 request per menit per IP/User)
+Route::prefix('v1')->middleware('throttle:60,1')->group(function () {
     // Public Routes
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
@@ -70,6 +72,18 @@ Route::prefix('v1')->group(function () {
             Route::post('/owner/kos', [KosController::class, 'store']);
             Route::put('/owner/kos/{id}', [KosController::class, 'update']);
             Route::delete('/owner/kos/{id}', [KosController::class, 'destroy']);
+        });
+
+        // Admin Routes (Issue #10) - Hanya bisa diakses oleh role 'admin'
+        Route::middleware('role:admin')->prefix('admin')->group(function () {
+            Route::get('/dashboard', [AdminController::class, 'dashboard']);
+            Route::get('/users', [AdminController::class, 'users']);
+            Route::put('/users/{id}/status', [AdminController::class, 'updateUserStatus']);
+            Route::get('/kos', [AdminController::class, 'kos']);
+            Route::put('/kos/{id}/status', [AdminController::class, 'updateKosStatus']);
+            Route::delete('/reviews/{id}', [AdminController::class, 'deleteReview']);
+            Route::get('/disbursements', [AdminController::class, 'disbursements']);
+            Route::put('/disbursements/{id}/status', [AdminController::class, 'updateDisbursementStatus']);
         });
     });
 });
