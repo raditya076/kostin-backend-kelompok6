@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\PaymentConfirmed;
 use App\Models\Booking;
 use App\Models\Kos;
 use App\Models\User;
@@ -275,7 +276,10 @@ class BookingService
                     $this->recordDanaDisbursement($booking->id);
                 });
 
-                Log::info("Webhook Midtrans SUKSES: Booking ID {$booking->id} diperbarui menjadi aktif.", [
+                // Dispatch Event Notifikasi WhatsApp Server-Side
+                event(new PaymentConfirmed($booking));
+
+                Log::info("Webhook Midtrans SUKSES: Booking ID {$booking->id} diperbarui menjadi aktif & event PaymentConfirmed di-dispatch.", [
                     'order_id' => $orderId,
                     'transaction_status' => $transactionStatus
                 ]);

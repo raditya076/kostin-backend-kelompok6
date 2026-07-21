@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CompareController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\ChatController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -31,7 +32,7 @@ Route::prefix('v1')->group(function () {
             return response()->json([
                 'success' => true,
                 'message' => 'User profile retrieved successfully',
-                'data' => $request->user()
+                'data'    => $request->user()
             ]);
         });
         
@@ -54,6 +55,9 @@ Route::prefix('v1')->group(function () {
 
         // Review Routes (Issue #8)
         Route::post('/kos/{id}/reviews', [ReviewController::class, 'store']);
+
+        // WhatsApp Chat Tanya Pemilik (Issue #9)
+        Route::post('/kos/{id}/tanya', [ChatController::class, 'tanyaPemilik']);
 
         // Booking Complete khusus untuk Pemilik Kos
         Route::middleware('role:pemilik')->group(function () {
