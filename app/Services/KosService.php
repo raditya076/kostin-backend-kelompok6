@@ -143,7 +143,7 @@ class KosService
     }
 
     /**
-     * Mencari kos berstatus aktif dengan filter pencarian dinamis (Pencari Side).
+     * Mencari kos berstatus aktif dengan filter pencarian dinamis & Geo-Search (Pencari Side).
      *
      * @param array $filters
      * @return \Illuminate\Database\Eloquent\Collection
@@ -180,6 +180,17 @@ class KosService
             if (isset($filters[$facility]) && $filters[$facility] === true) {
                 $query->where($facility, true);
             }
+        }
+
+        // Filter Geo-Search berdasarkan Radius (Haversine Formula)
+        if (isset($filters['user_lat']) && isset($filters['user_lng']) && $filters['user_lat'] !== null && $filters['user_lng'] !== null) {
+            $lat = (float) $filters['user_lat'];
+            $lng = (float) $filters['user_lng'];
+            $radius = isset($filters['radius_km']) ? (float) $filters['radius_km'] : 5;
+
+            $query->selectRaw("*, ( 6371 * acos( cos( radians(?) ) * cos( radians( lat ) ) * cos( radians( lng ) - radians(?) ) + sin( radians(?) ) * sin( radians( lat ) ) ) ) AS distance", [$lat, $lng, $lat])
+                  ->having("distance", "<=", $radius)
+                  ->orderBy("distance", "asc");
         }
 
         $results = $query->get();

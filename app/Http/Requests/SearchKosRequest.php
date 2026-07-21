@@ -34,6 +34,9 @@ class SearchKosRequest extends FormRequest
             'laundry'           => 'nullable|boolean',
             'security'          => 'nullable|boolean',
             'cctv'              => 'nullable|boolean',
+            'user_lat'          => 'nullable|numeric|between:-90,90',
+            'user_lng'          => 'nullable|numeric|between:-180,180',
+            'radius_km'         => 'nullable|numeric|min:0.5|max:100',
         ];
     }
 
