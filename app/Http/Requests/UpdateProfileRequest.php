@@ -29,6 +29,9 @@ class UpdateProfileRequest extends FormRequest
             'nama_bank'             => 'nullable|string|max:100',
             'nomor_rekening'        => 'nullable|string|max:50',
             'nama_pemilik_rekening' => 'nullable|string|max:255',
+            'jenis_kelamin'         => 'nullable|string|max:50',
+            'tanggal_lahir'         => 'nullable|string|max:50',
+            'alamat'                => 'nullable|string|max:500',
         ];
     }
 
@@ -43,6 +46,9 @@ class UpdateProfileRequest extends FormRequest
             'nama_bank'             => $this->nama_bank ? strip_tags(trim($this->nama_bank)) : null,
             'nomor_rekening'        => $this->nomor_rekening ? strip_tags(trim($this->nomor_rekening)) : null,
             'nama_pemilik_rekening' => $this->nama_pemilik_rekening ? strip_tags(trim($this->nama_pemilik_rekening)) : null,
+            'jenis_kelamin'         => $this->jenis_kelamin ? strip_tags(trim($this->jenis_kelamin)) : null,
+            'tanggal_lahir'         => $this->tanggal_lahir ? strip_tags(trim($this->tanggal_lahir)) : null,
+            'alamat'                => $this->alamat ? strip_tags(trim($this->alamat)) : null,
         ]);
     }
 

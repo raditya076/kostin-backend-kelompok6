@@ -52,8 +52,10 @@ Route::prefix('v1')->middleware('throttle:60,1')->group(function () {
 
         // Booking Routes (Issue #6)
         Route::get('/bookings', [BookingController::class, 'index']);
+        Route::get('/bookings/{id}', [BookingController::class, 'show']);
         Route::post('/bookings', [BookingController::class, 'store']);
         Route::post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
+        Route::post('/bookings/{id}/verify-payment', [BookingController::class, 'verifyPayment']);
 
         // Review Routes (Issue #8)
         Route::post('/kos/{id}/reviews', [ReviewController::class, 'store']);

@@ -32,7 +32,7 @@ class ChatController extends BaseController
         }
 
         $penyewa = $request->user();
-        $pesanInput = $request->validated('pesan');
+        $pesanInput = $request->input('pesan') || 'Halo, saya tertarik dengan kos ini dan ingin bertanya mengenai informasi lebih lanjut.';
 
         // Normalisasi nomor HP pemilik kos
         $formattedPhone = WhatsAppHelper::formatToWhatsApp($pemilik->no_hp);

@@ -167,7 +167,14 @@ class KosService
 
         // Filter Tipe Kos
         if (!empty($filters['tipe'])) {
-            $query->where('tipe', $filters['tipe']);
+            if (strtolower($filters['tipe']) === 'premium') {
+                $query->where(function ($q) {
+                    $q->where('tipe', 'premium')
+                      ->orWhere('harga_per_bulan', '>=', 2000000);
+                });
+            } else {
+                $query->where('tipe', $filters['tipe']);
+            }
         }
 
         // Filter Fasilitas (wifi, ac, kamar_mandi_dalam, parkir, dapur, laundry, security, cctv)

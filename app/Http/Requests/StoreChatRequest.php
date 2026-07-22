@@ -19,11 +19,10 @@ class StoreChatRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        if ($this->has('pesan')) {
-            $this->merge([
-                'pesan' => trim(strip_tags((string) $this->pesan)),
-            ]);
-        }
+        $pesan = $this->filled('pesan') ? trim(strip_tags((string) $this->pesan)) : 'Halo, saya tertarik dengan kos ini dan ingin menanyakan informasi lebih lanjut.';
+        $this->merge([
+            'pesan' => $pesan,
+        ]);
     }
 
     /**
@@ -34,7 +33,7 @@ class StoreChatRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'pesan' => ['required', 'string', 'min:5', 'max:500'],
+            'pesan' => ['nullable', 'string', 'max:500'],
         ];
     }
 

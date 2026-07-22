@@ -36,6 +36,38 @@ class BookingController extends BaseController
     }
 
     /**
+     * Menampilkan detail satu transaksi booking.
+     *
+     * GET /api/v1/bookings/{id}
+     */
+    public function show(Request $request, $id): JsonResponse
+    {
+        try {
+            $booking = $this->bookingService->findBookingDetails((int)$id, $request->user()->id);
+            return $this->success($booking, 'Detail booking berhasil diambil');
+        } catch (\Exception $e) {
+            $code = $e->getCode();
+            $statusCode = ($code >= 400 && $code < 600) ? $code : 400;
+            return $this->error($e->getMessage(), $statusCode);
+        }
+    }
+
+    /**
+     * Memverifikasi pembayaran transaksi booking.
+     *
+     * POST /api/v1/bookings/{id}/verify-payment
+     */
+    public function verifyPayment(Request $request, $id): JsonResponse
+    {
+        try {
+            $booking = $this->bookingService->verifyPayment((int)$id, $request->user()->id);
+            return $this->success($booking, 'Status pembayaran berhasil diverifikasi dan diperbarui.');
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
+    }
+
+    /**
      * Membuat transaksi booking baru (Snap Token).
      *
      * POST /api/v1/bookings

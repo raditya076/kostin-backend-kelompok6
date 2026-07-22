@@ -20,14 +20,14 @@ class ReviewService
      */
     public function createReview(int $userId, int $kosId, array $data): Review
     {
-        // 1. Validasi Sewa Selesai: Pastikan user memiliki booking dengan status 'selesai' untuk kos ini
+        // 1. Validasi Sewa: Pastikan user memiliki booking dengan status 'selesai' atau 'aktif' untuk kos ini
         $hasCompletedBooking = Booking::where('penyewa_id', $userId)
             ->where('kos_id', $kosId)
-            ->where('status', 'selesai')
+            ->whereIn('status', ['selesai', 'aktif'])
             ->exists();
 
         if (!$hasCompletedBooking) {
-            throw new \Exception("Hanya penyewa yang menyelesaikan sewa yang dapat memberi ulasan", 403);
+            throw new \Exception("Hanya penyewa yang telah memesan dan menyelesaikan pembayaran di kos ini yang dapat memberi ulasan", 403);
         }
 
         // 2. Validasi Duplikat: Pastikan user belum pernah mereview kos ini sebelumnya
