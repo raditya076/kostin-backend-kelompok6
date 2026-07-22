@@ -38,6 +38,19 @@ class Kos extends Model
 {
     protected $table = 'kos';
 
+    protected $appends = ['foto_utama_url'];
+
+    public function getFotoUtamaUrlAttribute(): ?string
+    {
+        if (!$this->foto_utama) {
+            return null;
+        }
+        if (str_starts_with($this->foto_utama, 'http://') || str_starts_with($this->foto_utama, 'https://')) {
+            return $this->foto_utama;
+        }
+        return url(\Illuminate\Support\Facades\Storage::url($this->foto_utama));
+    }
+
     /**
      * Konfigurasi tipe data casting atribut.
      *
