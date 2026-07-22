@@ -38,7 +38,7 @@ class Kos extends Model
 {
     protected $table = 'kos';
 
-    protected $appends = ['foto_utama_url'];
+    protected $appends = ['foto_utama_url', 'sisa_kamar', 'kamar_tersedia', 'rating'];
 
     public function getFotoUtamaUrlAttribute(): ?string
     {
@@ -49,6 +49,26 @@ class Kos extends Model
             return $this->foto_utama;
         }
         return url(\Illuminate\Support\Facades\Storage::url($this->foto_utama));
+    }
+
+    public function getSisaKamarAttribute(): int
+    {
+        return max(0, (int)($this->jumlah_kamar ?? 0) - (int)($this->kamar_terisi ?? 0));
+    }
+
+    public function getKamarTersediaAttribute(): int
+    {
+        return $this->getSisaKamarAttribute();
+    }
+
+    public function getRatingAttribute(): float
+    {
+        if ($this->relationLoaded('reviews')) {
+            $avg = $this->reviews->avg('rating');
+            return $avg ? round((float)$avg, 1) : 0.0;
+        }
+        $avg = $this->reviews()->avg('rating');
+        return $avg ? round((float)$avg, 1) : 0.0;
     }
 
     /**

@@ -19,6 +19,9 @@ use Laravel\Sanctum\HasApiTokens;
     'nama_bank',
     'nomor_rekening',
     'nama_pemilik_rekening',
+    'jenis_kelamin',
+    'tanggal_lahir',
+    'alamat',
     'role',
     'foto_profil',
     'status'
@@ -28,6 +31,22 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+
+    /**
+     * Accessor untuk foto_profil_url absolut.
+     */
+    protected $appends = ['foto_profil_url'];
+
+    public function getFotoProfilUrlAttribute(): ?string
+    {
+        if (!$this->foto_profil) {
+            return null;
+        }
+        if (str_starts_with($this->foto_profil, 'http://') || str_starts_with($this->foto_profil, 'https://')) {
+            return $this->foto_profil;
+        }
+        return asset('storage/' . $this->foto_profil);
+    }
 
     /**
      * Get the attributes that should be cast.

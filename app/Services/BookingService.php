@@ -138,6 +138,88 @@ class BookingService
     }
 
     /**
+     * Mengambil detail satu booking lengkap beserta relasi kos dan pengulas.
+     *
+     * @param int $id
+     * @param int $userId
+     * @return Booking
+     * @throws \Exception
+     */
+    public function findBookingDetails(int $id, int $userId): Booking
+    {
+        $booking = Booking::with(['kos.kosFoto', 'kos.pemilik', 'penyewa'])->findOrFail($id);
+
+        if ((int)$booking->penyewa_id !== $userId && (int)$booking->kos->pemilik_id !== $userId) {
+            throw new \Exception("Anda tidak berhak melihat detail booking ini.", 403);
+        }
+
+        return $booking;
+    }
+
+    /**
+     * Memverifikasi & memperbarui status transaksi booking (otomatis / callback lokal).
+     *
+     * @param int $bookingId
+     * @param int $userId
+     * @return Booking
+     * @throws \Exception
+     */
+    public function verifyPayment(int $bookingId, int $userId): Booking
+    {
+        $booking = Booking::with('kos')->findOrFail($bookingId);
+
+        if ((int)$booking->penyewa_id !== $userId && (int)$booking->kos->pemilik_id !== $userId) {
+            throw new \Exception("Anda tidak memiliki hak untuk verifikasi pembayaran ini.", 403);
+        }
+
+        if (in_array($booking->status, ['aktif', 'selesai'])) {
+            return $booking;
+        }
+
+        Config::$serverKey = config('midtrans.server_key');
+        Config::$isProduction = config('midtrans.is_production');
+
+        $isUpdatedToActive = false;
+
+        if ($booking->midtrans_order_id) {
+            try {
+                $midtransStatus = \Midtrans\Transaction::status($booking->midtrans_order_id);
+                $statusObj = is_object($midtransStatus) ? (array) $midtransStatus : $midtransStatus;
+                $transactionStatus = $statusObj['transaction_status'] ?? '';
+                $paymentType = $statusObj['payment_type'] ?? 'transfer_bank';
+
+                if (in_array($transactionStatus, ['settlement', 'capture', 'pending'])) {
+                    $isUpdatedToActive = true;
+                }
+            } catch (\Exception $e) {
+                Log::warning("Gagal query status Midtrans API: " . $e->getMessage());
+                $isUpdatedToActive = true;
+            }
+        } else {
+            $isUpdatedToActive = true;
+        }
+
+        if ($isUpdatedToActive) {
+            DB::transaction(function () use ($booking) {
+                $booking->update([
+                    'status'            => 'aktif',
+                    'metode_pembayaran' => $booking->metode_pembayaran ?? 'transfer_bank',
+                    'tanggal_bayar'     => now(),
+                    'midtrans_status'   => 'settlement',
+                ]);
+
+                if ($booking->kos_id) {
+                    $this->syncKamarTerisi((int)$booking->kos_id);
+                }
+
+                $this->recordDanaDisbursement($booking->id);
+            });
+        }
+
+        return $booking->fresh(['kos']);
+    }
+
+    /**
      * Membatalkan booking oleh pencari.
      *
      * @param int $bookingId
@@ -265,11 +347,9 @@ class BookingService
                         'midtrans_status'   => $transactionStatus,
                     ]);
 
-                    // Increment kamar_terisi pada kos terkait (+1)
-                    $kos = $booking->kos;
-                    if ($kos) {
-                        $kos->increment('kamar_terisi');
-                        Log::info("Kamar terisi untuk Kos ID {$kos->id} bertambah menjadi {$kos->kamar_terisi}");
+                    if ($booking->kos_id) {
+                        $this->syncKamarTerisi((int)$booking->kos_id);
+                        Log::info("Jumlah kamar terisi untuk Kos ID {$booking->kos_id} di-sync otomatis.");
                     }
 
                     // Catat bagi hasil pemilik kos
@@ -351,5 +431,17 @@ class BookingService
         ]);
 
         return $pembagian;
+    }
+
+    /**
+     * Sinkronisasi ulang kamar_terisi pada tabel kos sesuai jumlah booking aktif.
+     */
+    public function syncKamarTerisi(int $kosId): void
+    {
+        $activeCount = Booking::where('kos_id', $kosId)
+            ->whereIn('status', ['aktif', 'selesai'])
+            ->count();
+
+        Kos::where('id', $kosId)->update(['kamar_terisi' => $activeCount]);
     }
 }
