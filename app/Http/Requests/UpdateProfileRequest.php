@@ -32,6 +32,7 @@ class UpdateProfileRequest extends FormRequest
             'jenis_kelamin'         => 'nullable|string|max:50',
             'tanggal_lahir'         => 'nullable|string|max:50',
             'alamat'                => 'nullable|string|max:500',
+            'nik'                   => 'nullable|string|max:30',
         ];
     }
 
@@ -49,6 +50,7 @@ class UpdateProfileRequest extends FormRequest
             'jenis_kelamin'         => $this->jenis_kelamin ? strip_tags(trim($this->jenis_kelamin)) : null,
             'tanggal_lahir'         => $this->tanggal_lahir ? strip_tags(trim($this->tanggal_lahir)) : null,
             'alamat'                => $this->alamat ? strip_tags(trim($this->alamat)) : null,
+            'nik'                   => $this->nik ? strip_tags(trim($this->nik)) : null,
         ]);
     }
 

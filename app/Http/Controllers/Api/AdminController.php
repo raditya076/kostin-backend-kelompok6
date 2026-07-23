@@ -68,6 +68,16 @@ class AdminController extends BaseController
     }
 
     /**
+     * GET /api/v1/admin/reviews
+     * Mengambil daftar seluruh ulasan.
+     */
+    public function reviews(): JsonResponse
+    {
+        $reviews = $this->adminService->getAllReviews();
+        return $this->success($reviews, 'Daftar ulasan berhasil diambil');
+    }
+
+    /**
      * DELETE /api/v1/admin/reviews/{id}
      * Menghapus ulasan tidak pantas atau spam.
      */

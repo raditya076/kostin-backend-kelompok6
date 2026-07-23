@@ -61,4 +61,12 @@ class Booking extends Model
     {
         return $this->belongsTo(User::class, 'penyewa_id');
     }
+
+    /**
+     * Relasi ke PembagianDana.
+     */
+    public function pembagianDana(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(PembagianDana::class, 'booking_id');
+    }
 }

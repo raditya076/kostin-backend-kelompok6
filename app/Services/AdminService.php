@@ -23,7 +23,9 @@ class AdminService
         $totalUsers = User::count();
         $totalPencari = User::where('role', 'pencari')->count();
         $totalPemilik = User::where('role', 'pemilik')->count();
+        $totalKos = Kos::count();
         $totalKosAktif = Kos::where('status', 'aktif')->count();
+        $totalKosPending = Kos::where('status', 'pending')->count();
         $totalBookingSukses = Booking::whereIn('status', ['dibayar', 'aktif', 'selesai'])->count();
         $totalRevenuePlatform = (float) PembagianDana::sum('biaya_platform');
 
@@ -35,10 +37,22 @@ class AdminService
             'total_users'            => $totalUsers,
             'total_pencari'          => $totalPencari,
             'total_pemilik'          => $totalPemilik,
+            'total_kos'              => $totalKos,
             'total_kos_aktif'        => $totalKosAktif,
+            'total_kos_pending'      => $totalKosPending,
             'total_booking_sukses'   => $totalBookingSukses,
             'total_revenue_platform' => $totalRevenuePlatform,
         ];
+    }
+
+    /**
+     * Mengambil daftar seluruh ulasan.
+     *
+     * @return Collection
+     */
+    public function getAllReviews(): Collection
+    {
+        return Review::with(['user', 'kos'])->latest()->get();
     }
 
     /**
@@ -48,7 +62,7 @@ class AdminService
      */
     public function getAllUsers(): Collection
     {
-        return User::latest()->get();
+        return User::where('role', '!=', 'admin')->latest()->get();
     }
 
     /**
@@ -96,14 +110,26 @@ class AdminService
     {
         $kos = Kos::findOrFail($id);
         $oldStatus = $kos->status;
-        $kos->status = $status;
-        $kos->save();
+        $targetStatus = strtolower($status);
+
+        if ($targetStatus === 'rejected') {
+            $targetStatus = 'ditolak';
+        }
+
+        $kos->status = $targetStatus;
+        try {
+            $kos->save();
+        } catch (\Throwable $e) {
+            Log::warning("Fallback status kos ke nonaktif karena enum DB: " . $e->getMessage());
+            $kos->status = 'nonaktif';
+            $kos->save();
+        }
 
         Log::info('Admin updated kos status', [
             'admin_id'   => Auth::id(),
             'kos_id'     => $kos->id,
             'old_status' => $oldStatus,
-            'new_status' => $status,
+            'new_status' => $kos->status,
         ]);
 
         return $kos;
@@ -136,7 +162,29 @@ class AdminService
      */
     public function getDisbursements(): Collection
     {
-        return PembagianDana::with(['pemilik', 'booking'])->latest()->get();
+        // Auto-sync transaksi Midtrans yang berhasil tetapi belum tercatat di pembagian_dana
+        $activeBookings = Booking::whereIn('status', ['aktif', 'selesai', 'dibayar'])->with('kos')->get();
+        foreach ($activeBookings as $b) {
+            if ($b->kos && !PembagianDana::where('booking_id', $b->id)->exists()) {
+                $totalTransaksi = (float) $b->total_harga;
+                $biayaPlatform = $totalTransaksi * 0.03;
+                $jatahPemilik = $totalTransaksi - $biayaPlatform;
+
+                PembagianDana::create([
+                    'booking_id'          => $b->id,
+                    'pemilik_id'          => $b->kos->pemilik_id,
+                    'total_transaksi'     => $totalTransaksi,
+                    'persen_platform'     => 3.00,
+                    'biaya_platform'      => $biayaPlatform,
+                    'biaya_gateway'       => 0.00,
+                    'jatah_pemilik'       => $jatahPemilik,
+                    'status_disbursement' => 'pending',
+                    'catatan'             => 'Pencatatan otomatis transaksi Midtrans',
+                ]);
+            }
+        }
+
+        return PembagianDana::with(['pemilik', 'booking.kos'])->latest()->get();
     }
 
     /**

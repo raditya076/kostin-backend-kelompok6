@@ -78,4 +78,30 @@ class ProfileController extends BaseController
 
         return $this->success($updatedUser, 'Foto profil berhasil diperbarui');
     }
+
+    /**
+     * Mengunggah dan memperbarui file foto KTP pemilik kost.
+     *
+     * POST /api/v1/profile/ktp
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function uploadKtp(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'foto_ktp' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->first(), 422);
+        }
+
+        $user = $request->user();
+        $photo = $request->file('foto_ktp');
+
+        $updatedUser = $this->userService->updateKtpPhoto($user, $photo);
+
+        return $this->success($updatedUser, 'Foto KTP berhasil diunggah');
+    }
 }
