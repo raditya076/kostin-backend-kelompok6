@@ -130,7 +130,7 @@ class BookingService
         if ($role === 'pemilik') {
             return Booking::whereHas('kos', function ($query) use ($userId) {
                 $query->where('pemilik_id', $userId);
-            })->with(['kos', 'penyewa'])->orderBy('created_at', 'desc')->get();
+            })->with(['kos', 'penyewa', 'pembagianDana'])->orderBy('created_at', 'desc')->get();
         }
 
         // Pencari / Default

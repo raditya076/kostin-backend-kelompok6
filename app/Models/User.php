@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -22,6 +21,8 @@ use Laravel\Sanctum\HasApiTokens;
     'jenis_kelamin',
     'tanggal_lahir',
     'alamat',
+    'nik',
+    'foto_ktp',
     'role',
     'foto_profil',
     'status'
@@ -33,9 +34,9 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * Accessor untuk foto_profil_url absolut.
+     * Accessor untuk URL foto profil dan KTP.
      */
-    protected $appends = ['foto_profil_url'];
+    protected $appends = ['foto_profil_url', 'foto_ktp_url'];
 
     public function getFotoProfilUrlAttribute(): ?string
     {
@@ -46,6 +47,17 @@ class User extends Authenticatable
             return $this->foto_profil;
         }
         return asset('storage/' . $this->foto_profil);
+    }
+
+    public function getFotoKtpUrlAttribute(): ?string
+    {
+        if (!$this->foto_ktp) {
+            return null;
+        }
+        if (str_starts_with($this->foto_ktp, 'http://') || str_starts_with($this->foto_ktp, 'https://')) {
+            return $this->foto_ktp;
+        }
+        return asset('storage/' . $this->foto_ktp);
     }
 
     /**

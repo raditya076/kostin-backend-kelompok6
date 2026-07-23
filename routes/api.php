@@ -44,6 +44,7 @@ Route::prefix('v1')->middleware('throttle:60,1')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show']);
         Route::put('/profile', [ProfileController::class, 'update']);
         Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
+        Route::post('/profile/ktp', [ProfileController::class, 'uploadKtp']);
 
         // Favorite Routes (Issue #5)
         Route::get('/favorites', [FavoriteController::class, 'index']);
@@ -83,6 +84,7 @@ Route::prefix('v1')->middleware('throttle:60,1')->group(function () {
             Route::put('/users/{id}/status', [AdminController::class, 'updateUserStatus']);
             Route::get('/kos', [AdminController::class, 'kos']);
             Route::put('/kos/{id}/status', [AdminController::class, 'updateKosStatus']);
+            Route::get('/reviews', [AdminController::class, 'reviews']);
             Route::delete('/reviews/{id}', [AdminController::class, 'deleteReview']);
             Route::get('/disbursements', [AdminController::class, 'disbursements']);
             Route::put('/disbursements/{id}/status', [AdminController::class, 'updateDisbursementStatus']);

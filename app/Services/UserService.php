@@ -45,6 +45,9 @@ class UserService
         if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'alamat') && array_key_exists('alamat', $data)) {
             $updateData['alamat'] = $data['alamat'];
         }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'nik') && array_key_exists('nik', $data)) {
+            $updateData['nik'] = $data['nik'];
+        }
 
         if (!empty($updateData)) {
             $user->update($updateData);
@@ -87,6 +90,40 @@ class UserService
         Log::info('User profile photo updated successfully', [
             'user_id'        => $user->id,
             'new_photo_path' => $path
+        ]);
+
+        return $user;
+    }
+
+    /**
+     * Memproses upload dan memperbarui foto KTP pemilik kost.
+     *
+     * @param User $user
+     * @param UploadedFile $photo
+     * @return User
+     */
+    public function updateKtpPhoto(User $user, UploadedFile $photo): User
+    {
+        // 1. Hapus foto KTP lama dari storage jika ada
+        if ($user->foto_ktp) {
+            Storage::disk('public')->delete($user->foto_ktp);
+            Log::info('Old KTP photo deleted from storage', [
+                'user_id'   => $user->id,
+                'old_ktp'   => $user->foto_ktp
+            ]);
+        }
+
+        // 2. Simpan foto KTP baru ke folder 'ktp' di disk 'public'
+        $path = $photo->store('ktp', 'public');
+
+        // 3. Simpan path relatif foto KTP ke database
+        $user->update([
+            'foto_ktp' => $path
+        ]);
+
+        Log::info('User KTP photo updated successfully', [
+            'user_id'       => $user->id,
+            'new_ktp_path'  => $path
         ]);
 
         return $user;

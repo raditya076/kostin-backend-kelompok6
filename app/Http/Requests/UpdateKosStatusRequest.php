@@ -16,7 +16,7 @@ class UpdateKosStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => 'required|string|in:aktif,nonaktif,pending',
+            'status' => 'required|string|in:aktif,nonaktif,pending,ditolak,rejected',
         ];
     }
 
